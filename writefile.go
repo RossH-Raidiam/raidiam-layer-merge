@@ -158,7 +158,7 @@ func CleanJsonFile(outputDir, filename string) {
 		if strings.HasSuffix(line, "{,") {
 			cleanedStrings = append(cleanedStrings, strings.TrimSuffix(line, ","))
 		} else if strings.HasSuffix(line, "\",") {
-			if strings.HasSuffix(nl, "},") {
+			if strings.HasSuffix(nl, "},") || strings.HasSuffix(nl, "}") {
 				cleanedStrings = append(cleanedStrings, strings.TrimSuffix(line, ","))
 			} else {
 				cleanedStrings = append(cleanedStrings, line)
