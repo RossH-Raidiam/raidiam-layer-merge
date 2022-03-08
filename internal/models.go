@@ -1,9 +1,9 @@
 package internal
 
 type jsobj struct {
-	Key       string
-	Items     []item
-	SubObject []jsobj
+	Key        string
+	Items      []item
+	SubObjects []jsobj
 }
 
 type flatObj struct {

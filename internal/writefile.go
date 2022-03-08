@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -44,20 +45,18 @@ func writeObjectToFile(o jsobj, f *os.File, indent string) {
 		line := indent + "\t" + item.Key + ": " + item.Value
 		wtof(line, f)
 	}
-	for _, item := range o.SubObject {
+	for _, item := range o.SubObjects {
 		writeObjectToFile(item, f, indent+"\t")
 	}
-
-	endOfObject := indent + "},"
-	wtof(endOfObject, f)
+	wtof(indent+"},", f)
 }
 
 func flatObjsToJsObj(fa []flatObj) jsobj {
 
 	ob := jsobj{
-		Key:       strings.Split(fa[0].Key, ".")[0],
-		Items:     []item{},
-		SubObject: nil,
+		Key:        strings.Split(fa[0].Key, ".")[0],
+		Items:      []item{},
+		SubObjects: nil,
 	}
 
 	nonRootFa := []flatObj{}
@@ -79,7 +78,7 @@ func flatObjsToJsObj(fa []flatObj) jsobj {
 	}
 
 	for _, v := range m {
-		ob.SubObject = append(ob.SubObject, flatObjsToJsObj(v))
+		ob.SubObjects = append(ob.SubObjects, flatObjsToJsObj(v))
 	}
 
 	return ob
@@ -117,7 +116,7 @@ func CopyFile(src, dest string) {
 
 }
 
-func WriteToFile(m map[string]map[string]string, outputDir, filename string) {
+func WriteToFile(m map[string]map[string]string, outputDir, filename, start string) {
 
 	objects := makeJsObjects(m)
 	f, err := os.Create(path.Join(outputDir, filename))
@@ -125,11 +124,71 @@ func WriteToFile(m map[string]map[string]string, outputDir, filename string) {
 		fmt.Println("Error creating file: ", err.Error())
 	}
 
-	wtof("export default {", f)
+	wtof(start, f)
 
 	for _, o := range objects {
 		writeObjectToFile(o, f, "\t")
 	}
 
 	wtof("}", f)
+}
+
+func CleanJsonFile(outputDir, filename string) {
+	f, err := os.Open(path.Join(outputDir, filename))
+
+	if err != nil {
+		fmt.Println("Error opening file for cleaning: ", err.Error())
+	}
+
+	s := bufio.NewScanner(f)
+
+	lines := []string{}
+	for s.Scan() {
+		lines = append(lines, s.Text())
+	}
+
+	cleanedStrings := []string{}
+	for i, line := range lines {
+
+		var nl string
+		if i+1 != len(lines) {
+			nl = lines[i+1]
+		}
+
+		if strings.HasSuffix(line, "{,") {
+			cleanedStrings = append(cleanedStrings, strings.TrimSuffix(line, ","))
+		} else if strings.HasSuffix(line, "\",") {
+			if strings.HasSuffix(nl, "},") {
+				cleanedStrings = append(cleanedStrings, strings.TrimSuffix(line, ","))
+			} else {
+				cleanedStrings = append(cleanedStrings, line)
+			}
+		} else if strings.HasSuffix(line, "},") {
+			if strings.Contains(line, "{") && strings.Contains(line, "}") {
+				if strings.Contains(nl, "{") && strings.Contains(nl, "}") {
+					cleanedStrings = append(cleanedStrings, line)
+				} else {
+					cleanedStrings = append(cleanedStrings, strings.TrimSuffix(line, ","))
+				}
+			} else if strings.HasSuffix(nl, "}") || strings.HasSuffix(nl, "},") {
+				cleanedStrings = append(cleanedStrings, strings.TrimSuffix(line, ","))
+			} else {
+				cleanedStrings = append(cleanedStrings, line)
+			}
+		} else {
+			cleanedStrings = append(cleanedStrings, line)
+		}
+	}
+	f.Close()
+
+	f, err = os.OpenFile(path.Join(outputDir, filename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		fmt.Println("error opening file: ", err.Error())
+	}
+
+	for _, v := range cleanedStrings {
+		f.WriteString(v + "\n")
+	}
+
+	f.Close()
 }
