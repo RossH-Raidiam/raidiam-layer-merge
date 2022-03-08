@@ -1,3 +1,3 @@
-module github.com/RossH-Raidiam/translation-override-internal
+module github.com/RossH-Raidiam/raidiam-layer-merge
 
 go 1.17
