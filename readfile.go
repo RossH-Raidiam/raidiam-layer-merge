@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 )
 
-func GetRoot(path string) string {
+func GetRoot(path string) (string, error) {
 	root, err := filepath.Abs(path)
 	if err != nil {
-		fmt.Println("Error found getting path to base directory: ", err.Error())
-		os.Exit(1)
+		fmt.Println("Error finding directory: ", err.Error())
+		return "", err
 	}
-	return root
+	return root, nil
 }
 
 func GetFileNames(root string) map[string]bool {
